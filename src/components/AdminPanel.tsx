@@ -595,7 +595,15 @@ export default function AdminPanel({
         body: JSON.stringify({ questions: questions.map(q => ({ id: q.id, question: q.question })) })
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Failed to parse API response as JSON. Response was:", text);
+        throw new Error("Server returned an invalid response.");
+      }
+
       if (data.success && data.classifications) {
         const classificationsMap = new Map<string, { subject: string; targetExam?: string }>();
         data.classifications.forEach((c: { id: string; subject: string; targetExam?: string }) => {
