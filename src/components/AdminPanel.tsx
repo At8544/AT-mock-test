@@ -37,7 +37,6 @@ import {
   getHtmlMockTests
 } from "../lib/firebaseService";
 import { setItem, clearAll, removeItem } from "../lib/db";
-import { parseHtmlToQuestions } from "../parser";
 import { initialQuestions } from "../dummyData";
 
 interface AdminPanelProps {
@@ -327,7 +326,8 @@ export default function AdminPanel({
 
         const htmlContent = await readFileAsText(file);
         // Invoke high fidelity parser from DOM or regex heuristic scanning
-        const parsedList = await parseHtmlToQuestions(htmlContent, activeExam);
+        // Removed: parsing functionality as parser.ts is deprecated.
+        const parsedList: Question[] = [];
         
         parsedList.forEach((q, idx) => {
           q.id = `html-ing-${Date.now()}-${i}-${idx}-${Math.random().toString(36).substring(4)}`;
