@@ -327,7 +327,7 @@ export default function AdminPanel({
 
         const htmlContent = await readFileAsText(file);
         // Invoke high fidelity parser from DOM or regex heuristic scanning
-        const parsedList = parseHtmlToQuestions(htmlContent, activeExam);
+       const parsedList = await parseHtmlToQuestions(htmlContent, activeExam);
         
         parsedList.forEach((q, idx) => {
           q.id = `html-ing-${Date.now()}-${i}-${idx}-${Math.random().toString(36).substring(4)}`;
