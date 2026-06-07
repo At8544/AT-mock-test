@@ -1137,8 +1137,21 @@ ${req.body.explanation || "No offline rationale registered."}`
 
         try {
           const responseText = await callAIEngine(prompt, "gemini-3.5-flash", "application/json", 0.1);
-          const parsed = JSON.parse(responseText.trim());
-          Object.entries(parsed).forEach(([id, subject]) => {
+          let cleaned = responseText.trim();
+          // Strip markdown
+          if (cleaned.startsWith("```json")) cleaned = cleaned.substring(7);
+          if (cleaned.startsWith("```")) cleaned = cleaned.substring(3);
+          if (cleaned.endsWith("```")) cleaned = cleaned.substring(0, cleaned.length - 3);
+          cleaned = cleaned.trim();
+          
+          const parsed = JSON.parse(cleaned);
+          
+          // Support both object { "id": "subject" } and array [{id: "id", subject: "subject"}]
+          const entries = Array.isArray(parsed) 
+            ? parsed.map(item => [item.id, item.subject])
+            : Object.entries(parsed);
+            
+          entries.forEach(([id, subject]) => {
             const matchedQuestion = chunk.find(q => q.id === id);
             let targetExam = undefined;
             if (matchedQuestion) {
@@ -1157,7 +1170,7 @@ ${req.body.explanation || "No offline rationale registered."}`
             classifications.push({ id, subject: String(subject), targetExam });
           });
         } catch (chunkErr) {
-          console.error("AI classification fallback triggered on chunk due to quota limits or parse error:", chunkErr);
+          console.error("AI classification fallback triggered on chunk:", chunkErr);
           chunk.forEach((q) => {
             const text = (q.question || "").toLowerCase();
             let subject = "General Knowledge";
