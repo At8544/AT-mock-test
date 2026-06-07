@@ -36,7 +36,7 @@ import {
   saveHtmlMockTestToFirestore,
   getHtmlMockTests
 } from "../lib/firebaseService";
-import { setItem, clearAll } from "../lib/db";
+import { setItem, clearAll, removeItem } from "../lib/db";
 import { parseHtmlToQuestions } from "../parser";
 import { initialQuestions } from "../dummyData";
 
@@ -327,7 +327,7 @@ export default function AdminPanel({
 
         const htmlContent = await readFileAsText(file);
         // Invoke high fidelity parser from DOM or regex heuristic scanning
-       const parsedList = await parseHtmlToQuestions(htmlContent, activeExam);
+        const parsedList = await parseHtmlToQuestions(htmlContent, activeExam);
         
         parsedList.forEach((q, idx) => {
           q.id = `html-ing-${Date.now()}-${i}-${idx}-${Math.random().toString(36).substring(4)}`;
@@ -597,22 +597,26 @@ export default function AdminPanel({
 
       const data = await response.json();
       if (data.success && data.classifications) {
-        const classificationsMap = new Map<string, string>();
-        data.classifications.forEach((c: { id: string; subject: string }) => {
-          classificationsMap.set(c.id, c.subject);
+        const classificationsMap = new Map<string, { subject: string; targetExam?: string }>();
+        data.classifications.forEach((c: { id: string; subject: string; targetExam?: string }) => {
+          classificationsMap.set(c.id, { subject: c.subject, targetExam: c.targetExam });
         });
 
         const updatedQuestions = questions.map(q => {
-          const newSubject = classificationsMap.get(q.id);
-          if (newSubject) {
-            return { ...q, subject: newSubject };
+          const classification = classificationsMap.get(q.id);
+          if (classification) {
+            return { 
+              ...q, 
+              subject: classification.subject,
+              targetExam: classification.targetExam || q.targetExam // Preserve or update
+            };
           }
           return q;
         });
 
         await batchSaveQuestions(updatedQuestions);
         setQuestions(updatedQuestions);
-        triggerSuccessAlert(`✨ Successfully classified all ${data.classifications.length} questions into standard subject zones via Multi-Model Gemini AI!`);
+        triggerSuccessAlert(`✨ Successfully classified all ${data.classifications.length} questions into standard subjects and shared-syllabus targets via Multi-Model Gemini AI!`);
       } else {
         alert("Failed to classify subjects via AI: " + (data.error || "Unknown error"));
       }
@@ -645,6 +649,13 @@ export default function AdminPanel({
           if (filtered.length === 0) {
             await setItem("database_wiped_flag", "true");
           }
+          // Clear any active local cache files containing question references
+          localStorage.removeItem("mistake_book");
+          localStorage.removeItem("practice_sessions");
+          localStorage.removeItem("performance_stats");
+          await removeItem("mistake_book");
+          await removeItem("target_active_practice_draft");
+
           triggerSuccessAlert(`Removed all ${idsToDelete.length} generated questions successfully.`);
           setSyncStatus("Synced");
       }).catch(err => {
@@ -663,7 +674,7 @@ export default function AdminPanel({
           setTotalQuestionsCount(0);
           await setItem("database_wiped_flag", "true");
           await clearAll();
-          triggerSuccessAlert("Database wiped completely.");
+          triggerSuccessAlert("Database wiped completely from Firestore and local cache storage.");
           setSyncStatus("Synced");
       }).catch(err => {
          setSyncStatus("Synced");
