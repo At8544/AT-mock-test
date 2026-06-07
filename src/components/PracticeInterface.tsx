@@ -4,10 +4,9 @@
  */
 
 import { useState, useEffect } from "react";
-import { Question, PerformanceStats, PracticeSession, MistakeBookItem } from "../types";
+import { Question, PerformanceStats, PracticeSession, MistakeBookItem, matchExamSimple } from "../types";
 import { setItem } from "../lib/db";
 import { saveQuestionToFirestore } from "../lib/firebaseService";
-import { CircularProgressBar } from "./CircularProgressBar";
 import {
   Brain,
   Award,
@@ -185,13 +184,13 @@ export default function PracticeInterface({
   };
 
   const uniqueSubjectsForExam = Array.from(
-    new Set(questions.filter(q => q.targetExam === activeExam).map(q => q.subject))
+    new Set(questions.filter(q => matchExamSimple(q.targetExam, activeExam)).map(q => q.subject))
   ).filter(Boolean) as string[];
 
   const uniqueTopicsForExam = Array.from(
     new Set(
       questions
-        .filter(q => q.targetExam === activeExam && (!selectedSubject || q.subject === selectedSubject))
+        .filter(q => matchExamSimple(q.targetExam, activeExam) && (!selectedSubject || q.subject === selectedSubject))
         .map(q => q.topic)
     )
   ).filter(Boolean) as string[];
@@ -203,7 +202,7 @@ export default function PracticeInterface({
     }
     setAiIsFiltering(true);
     try {
-      const activeExamPool = questions.filter(q => q.targetExam === activeExam);
+      const activeExamPool = questions.filter(q => matchExamSimple(q.targetExam, activeExam));
       const questionsSummary = activeExamPool.map(q => ({
         id: q.id,
         subject: q.subject,
@@ -236,7 +235,7 @@ export default function PracticeInterface({
       console.error("AI matching fallback error:", err);
       const term = aiFilterQuery.toLowerCase();
       const matches = questions.filter(q => 
-        q.targetExam === activeExam &&
+        matchExamSimple(q.targetExam, activeExam) &&
         ((q.subject && q.subject.toLowerCase().includes(term)) ||
         (q.topic && q.topic.toLowerCase().includes(term)) ||
         q.question.toLowerCase().includes(term))
@@ -287,11 +286,11 @@ export default function PracticeInterface({
       } catch (err) {
         console.warn("Express backend call stalled or offline. Falling back to local questions pool.");
         // local query fallback
-        selectedQuestions = questions.filter(q => q.sourceType === "current_affairs" || q.targetExam === activeExam);
+        selectedQuestions = questions.filter(q => q.sourceType === "current_affairs" || matchExamSimple(q.targetExam, activeExam));
       }
     } else {
       // Step B: Build from local pool matching active exam target
-      let examPool = questions.filter(q => q.targetExam === activeExam);
+      let examPool = questions.filter(q => matchExamSimple(q.targetExam, activeExam));
       
       if (examPool.length === 0) {
         examPool = [...questions];
@@ -322,7 +321,7 @@ export default function PracticeInterface({
       let injectedMistakes: Question[] = [];
       if (useSpacedRepetion && mistakeItems.length > 0) {
         const wrongQs = questions.filter(q => mistakeItems.some(m => m.questionId === q.id));
-        injectedMistakes = wrongQs.filter(q => q.targetExam === activeExam).slice(0, Math.floor(actualNumQuestions / 2));
+        injectedMistakes = wrongQs.filter(q => matchExamSimple(q.targetExam, activeExam)).slice(0, Math.floor(actualNumQuestions / 2));
         if (injectedMistakes.length === 0) {
           injectedMistakes = wrongQs.slice(0, Math.floor(actualNumQuestions / 2));
         }
@@ -613,7 +612,7 @@ export default function PracticeInterface({
   const activeQ = activeQuestions[currentIndex];
   const hasAnsweredCurrent = activeQ && userAnswers[activeQ.id] !== undefined;
 
-  const activeExamPool = questions.filter(q => q.targetExam === activeExam);
+  const activeExamPool = questions.filter(q => matchExamSimple(q.targetExam, activeExam));
   const availableCount = activeExamPool.length;
 
   const liveAccuracy = stats.totalQuestionsSolved > 0
@@ -644,7 +643,7 @@ export default function PracticeInterface({
                     <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">Practice Arena</h3>
                     <span className="text-[10px] text-indigo-400 font-mono font-bold uppercase tracking-widest leading-none">{activeExam}</span>
                   </div>
-                  <CircularProgressBar progress={stats.totalQuestionsSolved / (availableCount || 1) * 100} size={40} strokeWidth={4} />
+{/* Removed */}
               </div>
             </div>
 
@@ -659,14 +658,14 @@ export default function PracticeInterface({
                   <Clock size={12} className="text-amber-500 animate-pulse" />
                   <span className="text-[9px] font-mono font-black tracking-widest text-slate-500 uppercase">COUNTDOWN:</span>
                   <span className="text-[10px] font-mono font-black tracking-tight text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                    {days === 0 ? "EXAM TODAY!" : `${days} DAYS`}
+                    {days === 0 ? "EXAM TODAY!" : `${days} DAYS REMAINING`}
                   </span>
                 </div>
               );
             })()}
 
             <div className="bg-indigo-500/10 text-indigo-455 border border-indigo-500/25 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-black uppercase tracking-wider">
-              📚 {availableCount} Questions
+              📚 {availableCount} Questions Available
             </div>
           </div>
 
