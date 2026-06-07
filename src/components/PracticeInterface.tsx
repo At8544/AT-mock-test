@@ -659,14 +659,14 @@ export default function PracticeInterface({
                   <Clock size={12} className="text-amber-500 animate-pulse" />
                   <span className="text-[9px] font-mono font-black tracking-widest text-slate-500 uppercase">COUNTDOWN:</span>
                   <span className="text-[10px] font-mono font-black tracking-tight text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                    {days === 0 ? "EXAM TODAY!" : `${days} DAYS REMAINING`}
+                    {days === 0 ? "EXAM TODAY!" : `${days} DAYS`}
                   </span>
                 </div>
               );
             })()}
 
             <div className="bg-indigo-500/10 text-indigo-455 border border-indigo-500/25 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-black uppercase tracking-wider">
-              📚 {availableCount} Questions Available
+              📚 {availableCount} Questions
             </div>
           </div>
 
